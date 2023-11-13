@@ -12,6 +12,9 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "TimerManager.h"
+#include "Engine/DamageEvents.h"
+#include "Animation/AnimInstance.h"
 
 // Sets default values
 AGGCharacter::AGGCharacter()
@@ -24,6 +27,9 @@ AGGCharacter::AGGCharacter()
 
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>("Camera");
 	CameraComponent->SetupAttachment(SpringArmComponent);
+
+	SwordCapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>("SwordCapsule");
+	SwordCapsuleComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, FName("RightHandSocket"));
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>("HealthComponent");
 
@@ -49,6 +55,16 @@ void AGGCharacter::BeginPlay()
 		HealthComponent->OnDeath.AddDynamic(this, &AGGCharacter::OnCharacterDeath);
 	}
 
+	if (IsValid(SwordCapsuleComponent))
+	{
+		SwordCapsuleComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+		SwordCapsuleComponent->OnComponentBeginOverlap.AddDynamic(this, &AGGCharacter::OnSwordCapsuleOverlaped);
+	}
+	AnimInstance = GetMesh()->GetAnimInstance();
+	if (IsValid(AnimInstance))
+	{
+		AnimInstance->OnMontageEnded.AddDynamic(this, &AGGCharacter::OnAttackAnimationEnd);
+	}
 }
 
 // Called every frame
@@ -71,8 +87,7 @@ void AGGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AGGCharacter::Jump);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Triggered, this, &AGGCharacter::Run);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AGGCharacter::StopRuning);
-		EnhancedInputComponent->BindAction(AtackAction, ETriggerEvent::Started, this, &AGGCharacter::Atack);
-		EnhancedInputComponent->BindAction(AtackAction, ETriggerEvent::Completed, this, &AGGCharacter::StopAtack);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AGGCharacter::Attack);
 	}
 
 }
@@ -107,14 +122,21 @@ void AGGCharacter::StopRuning(const FInputActionValue& Value)
 
 }
 
-void AGGCharacter::Atack(const FInputActionValue& Value)
-{
-
+void AGGCharacter::Attack(const FInputActionValue& Value)
+{	
+	if (!bIsAttack)
+	{
+		bIsAttack = true;
+		PlayAnimMontage(AttackAnimation);
+	}
 }
 
-void AGGCharacter::StopAtack(const FInputActionValue& Value)
+void AGGCharacter::OnAttackAnimationEnd(UAnimMontage* Montage, bool bInterrupted)
 {
-
+	if (Montage == AttackAnimation)
+	{
+		bIsAttack = false;
+	}
 }
 
 float AGGCharacter::GetMovementDirection()
@@ -142,3 +164,22 @@ void AGGCharacter::OnCharacterDeath()
 	}
 }
 
+void AGGCharacter::OnSwordCapsuleOverlaped(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Hit)
+{
+	if (IsValid(OtherActor) && OtherActor != this)
+	{
+		OtherActor->TakeDamage(10.f, FDamageEvent(), GetController(), this);
+	}
+}
+
+void AGGCharacter::SetSwordCollisionActive(bool bIsActive)
+{
+	if (bIsActive)
+	{
+		SwordCapsuleComponent->SetCollisionResponseToAllChannels(ECR_Overlap);
+	}
+	else
+	{
+		SwordCapsuleComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	}
+}

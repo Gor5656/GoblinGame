@@ -21,6 +21,15 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 	class USpringArmComponent* SpringArmComponent;
 
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	class UCapsuleComponent* SwordCapsuleComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	class UAnimMontage* AttackAnimation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	class UAnimInstance* AnimInstance;
+
 private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -41,10 +50,13 @@ private:
 	class UInputAction* RunAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* AtackAction;
+	class UInputAction* AttackAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UHealthComponent* HealthComponent;
+
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	bool bIsAttack = false;
 
 protected:
 	// Called when the game starts or when spawned
@@ -70,15 +82,26 @@ public:
 	void StopRuning(const FInputActionValue& Value);
 
 	UFUNCTION()
-	void Atack(const FInputActionValue& Value);
-
-	UFUNCTION()
-	void StopAtack(const FInputActionValue& Value);
+	void Attack(const FInputActionValue& Value);
 
 	UFUNCTION(BlueprintCallable)
 	float GetMovementDirection();
 
 	UFUNCTION()
 	void OnCharacterDeath();
+	
+	UFUNCTION()
+	void OnAttackAnimationEnd(class UAnimMontage* Montage, bool bInterrupted);
+
+	UFUNCTION()
+	void OnSwordCapsuleOverlaped(UPrimitiveComponent* OverlappedComponent,	//
+								AActor* OtherActor,							//
+								UPrimitiveComponent* OtherComponent,		//
+								int32 OtherBodyIndex,						//
+								bool bFromSweep,							//
+								const FHitResult& Hit);						//
+
+	UFUNCTION(BlueprintCallable)
+	void SetSwordCollisionActive(bool bIsActive);
 
 };
