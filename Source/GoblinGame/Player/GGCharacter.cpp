@@ -158,17 +158,26 @@ void AGGCharacter::OnCharacterDeath()
 	SetLifeSpan(5.f);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 
-	if (IsValid(Controller))
-	{
-		Controller->ChangeState(NAME_Spectating);
-	}
+	FTimerHandle TimerHandle;
+
+	FTimerDelegate TimerDelegate;
+
+	TimerDelegate.BindLambda([&]()
+	{	
+		if (IsValid(Controller))
+		{
+			Controller->ChangeState(NAME_Spectating);
+		}
+	});
+
+	GetWorldTimerManager().SetTimer(TimerHandle, TimerDelegate, 2.f, false);
 }
 
 void AGGCharacter::OnSwordCapsuleOverlaped(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Hit)
 {
 	if (IsValid(OtherActor) && OtherActor != this)
 	{
-		OtherActor->TakeDamage(10.f, FDamageEvent(), GetController(), this);
+		OtherActor->TakeDamage(50.f, FDamageEvent(), GetController(), this);
 	}
 }
 
